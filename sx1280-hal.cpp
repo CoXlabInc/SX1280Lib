@@ -137,7 +137,7 @@ void SX1280Hal::SpiInit( void )
 #if defined( TARGET_KL25Z )
     RadioSpi->frequency( 4000000 );
 #elif defined( TARGET_NUCLEO_L476RG )
-    RadioSpi->frequency( 4000000 );
+    RadioSpi->frequency( 8000000 );
 #else
     RadioSpi->frequency( 8000000 );
 #endif
