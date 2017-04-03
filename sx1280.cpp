@@ -530,7 +530,7 @@ void SX1280::SetLongPreamble( bool enable )
 
 void SX1280::SetPayload( uint8_t *buffer, uint8_t size, uint8_t offset )
 {
-    WriteBuffer( 0x00, buffer, size );
+    WriteBuffer( offset, buffer, size );
 }
 
 uint8_t SX1280::GetPayload( uint8_t *buffer, uint8_t *size , uint8_t maxSize )
