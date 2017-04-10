@@ -66,7 +66,7 @@ void SX1280::SetRegistersDefault( void )
 
 uint16_t SX1280::GetFirmwareVersion( void )
 {
-    return( ( ( ReadRegister( 0xA8 ) ) << 8 ) | ( ReadRegister( 0xA9 ) ) );
+    return( ( ( ReadRegister( 0x0153 ) ) << 8 ) | ( ReadRegister( 0x0154 ) ) );
 }
 
 RadioStatus_t SX1280::GetStatus( void )
