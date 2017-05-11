@@ -270,11 +270,20 @@ void SX1280Hal::ReadCommand( RadioCommands_t command, uint8_t *buffer, uint16_t 
     if( RadioSpi != NULL )
     {
         RadioNss = 0;
-        RadioSpi->write( ( uint8_t )command );
-        RadioSpi->write( 0 );
-        for( uint16_t i = 0; i < size; i++ )
+        if( command == RADIO_GET_STATUS )
         {
-             buffer[i] = RadioSpi->write( 0 );
+            buffer[0] = RadioSpi->write( ( uint8_t )command );
+            RadioSpi->write( 0 );
+            RadioSpi->write( 0 );
+        }
+        else
+        {
+            RadioSpi->write( ( uint8_t )command );
+            RadioSpi->write( 0 );
+            for( uint16_t i = 0; i < size; i++ )
+            {
+                 buffer[i] = RadioSpi->write( 0 );
+            }
         }
         RadioNss = 1;
     }

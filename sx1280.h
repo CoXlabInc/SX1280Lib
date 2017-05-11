@@ -173,6 +173,12 @@ typedef void ( SX1280Hal::*Trigger )( void );
 #define REG_LR_SYNCWORDTOLERANCE                    0x09CD
 
 /*!
+ * \brief Register and mask for GFSK and BLE preamble length forcing
+ */
+#define REG_LR_PREAMBLELENGTH                       0x09C1
+#define MASK_FORCE_PREAMBLELENGTH                   0x8F
+
+/*!
  * \brief Represents the states of the radio
  */
 typedef enum
@@ -218,8 +224,8 @@ typedef enum
  */
 typedef enum
 {
-    USE_LDO                               = 0x00,           //! Use LDO (default value)
-    USE_DCDC                              = 0x01,           //! Use DCDC
+    USE_LDO                                 = 0x00,         //! Use LDO (default value)
+    USE_DCDC                                = 0x01,         //! Use DCDC
 }RadioRegulatorModes_t;
 
 /*!
@@ -256,10 +262,10 @@ typedef enum
 typedef enum
 {
     LORA_CAD_01_SYMBOL                      = 0x00,
-    LORA_CAD_02_SYMBOL                      = 0x20,
-    LORA_CAD_04_SYMBOL                      = 0x40,
-    LORA_CAD_08_SYMBOL                      = 0x60,
-    LORA_CAD_16_SYMBOL                      = 0x80,
+    LORA_CAD_02_SYMBOLS                     = 0x20,
+    LORA_CAD_04_SYMBOLS                     = 0x40,
+    LORA_CAD_08_SYMBOLS                     = 0x60,
+    LORA_CAD_16_SYMBOLS                     = 0x80,
 }RadioLoRaCadSymbols_t;
 
 /*!
@@ -408,8 +414,8 @@ typedef enum
  */
 typedef enum
 {
-    FLRC_NO_SYNCWORD                       = 0x00,
-    FLRC_SYNCWORD_LENGTH_4_BYTE            = 0x04,
+    FLRC_NO_SYNCWORD                        = 0x00,
+    FLRC_SYNCWORD_LENGTH_4_BYTE             = 0x04,
 }RadioFlrcSyncWordLengths_t;
 
 /*!
@@ -543,7 +549,7 @@ typedef enum
 {
     BLE_CRC_OFF                             = 0x00,
     BLE_CRC_3B                              = 0x10,
-}RadioBleCrcFields_t;
+}RadioBleCrcTypes_t;
 
 /*!
  * \brief Represents the specific packets to use in BLE packet type
@@ -558,7 +564,7 @@ typedef enum
     BLE_EYESHORT_0_1                        = 0x1C,         //!< Repeated '01010101' sequence
     BLE_ALL_1                               = 0x10,         //!< Repeated '11111111' sequence
     BLE_ALL_0                               = 0x14,         //!< Repeated '00000000' sequence
-}RadioBlePacketTypes_t;
+}RadioBleTestPayloads_t;
 
 /*!
  * \brief Represents the interruption masks available for the radio
@@ -578,10 +584,10 @@ typedef enum
     IRQ_RANGING_SLAVE_RESPONSE_DONE         = 0x0080,
     IRQ_RANGING_SLAVE_REQUEST_DISCARDED     = 0x0100,
     IRQ_RANGING_MASTER_RESULT_VALID         = 0x0200,
-    IRQ_RANGING_MASTER_RESULT_TIMEOUT       = 0x0400,
+    IRQ_RANGING_MASTER_TIMEOUT              = 0x0400,
     IRQ_RANGING_SLAVE_REQUEST_VALID         = 0x0800,
     IRQ_CAD_DONE                            = 0x1000,
-    IRQ_CAD_ACTIVITY_DETECTED               = 0x2000,
+    IRQ_CAD_DETECTED                        = 0x2000,
     IRQ_RX_TX_TIMEOUT                       = 0x4000,
     IRQ_PREAMBLE_DETECTED                   = 0x8000,
     IRQ_RADIO_ALL                           = 0xFFFF,
@@ -664,23 +670,23 @@ typedef enum RadioCommands_u
  * \brief Represents an amount of time measurable by the radio clock
  *
  * @code
- * Time = Step * NbSteps
+ * Time = PeriodBase * PeriodBaseCount
  * Example:
- * Step = RADIO_TICK_SIZE_4000_US( 4 ms )
- * NbSteps = 1000
+ * PeriodBase = RADIO_TICK_SIZE_4000_US( 4 ms )
+ * PeriodBaseCount = 1000
  * Time = 4e-3 * 1000 = 4 seconds
  * @endcode
  */
 typedef struct TickTime_s
 {
-    RadioTickSizes_t Step;                                  //!< The step of ticktime
+    RadioTickSizes_t PeriodBase;                            //!< The base time of ticktime
     /*!
-     * \brief The number of steps for ticktime
+     * \brief The number of periodBase for ticktime
      * Special values are:
      *     - 0x0000 for single mode
      *     - 0xFFFF for continuous mode
      */
-    uint16_t NbSteps;
+    uint16_t PeriodBaseCount;
 }TickTime_t;
 
 /*!
@@ -699,7 +705,7 @@ typedef struct TickTime_s
  */
 typedef struct
 {
-    RadioPacketTypes_t                    PacketType;        //!< Packet to which the modulation parameters are referring to.
+    RadioPacketTypes_t                    PacketType;       //!< Packet to which the modulation parameters are referring to.
     struct
     {
         /*!
@@ -709,9 +715,9 @@ typedef struct
          */
         struct
         {
-            RadioGfskBleBitrates_t    BitrateBandwidth;  //!< The bandwidth and bit-rate values for BLE and GFSK modulations
-            RadioGfskBleModIndexes_t  ModulationIndex;   //!< The coding rate for BLE and GFSK modulations
-            RadioModShapings_t        ModulationShaping; //!< The modulation shaping for BLE and GFSK modulations
+            RadioGfskBleBitrates_t    BitrateBandwidth;     //!< The bandwidth and bit-rate values for BLE and GFSK modulations
+            RadioGfskBleModIndexes_t  ModulationIndex;      //!< The coding rate for BLE and GFSK modulations
+            RadioModShapings_t        ModulationShaping;    //!< The modulation shaping for BLE and GFSK modulations
         }Gfsk;
         /*!
          * \brief Holds the LORA modulation parameters
@@ -746,7 +752,7 @@ typedef struct
             RadioGfskBleModIndexes_t     ModulationIndex;   //!< The coding rate for BLE and GFSK modulations
             RadioModShapings_t           ModulationShaping; //!< The modulation shaping for BLE and GFSK modulations
         }Ble;
-    }Params;                                                   //!< Holds the modulation parameters structure
+    }Params;                                                //!< Holds the modulation parameters structure
 }ModulationParams_t;
 
 /*!
@@ -754,7 +760,7 @@ typedef struct
  */
 typedef struct
 {
-    RadioPacketTypes_t                    PacketType;        //!< Packet to which the packet parameters are referring to.
+    RadioPacketTypes_t                    PacketType;       //!< Packet to which the packet parameters are referring to.
     struct
     {
         /*!
@@ -775,11 +781,11 @@ typedef struct
          */
         struct
         {
-            uint8_t                       PreambleLength;    //!< The preamble length is the number of LORA symbols in the preamble. To set it, use the following formula @code Number of symbols = PreambleLength[3:0] * ( 2^PreambleLength[7:4] ) @endcode
-            RadioLoRaPacketLengthsModes_t HeaderType;        //!< If the header is explicit, it will be transmitted in the LORA packet. If the header is implicit, it will not be transmitted
-            uint8_t                       PayloadLength;     //!< Size of the payload in the LORA packet
-            RadioLoRaCrcModes_t           CrcMode;           //!< Size of CRC block in LORA packet
-            RadioLoRaIQModes_t            InvertIQ;          //!< Allows to swap IQ for LORA packet
+            uint8_t                       PreambleLength;   //!< The preamble length is the number of LORA symbols in the preamble. To set it, use the following formula @code Number of symbols = PreambleLength[3:0] * ( 2^PreambleLength[7:4] ) @endcode
+            RadioLoRaPacketLengthsModes_t HeaderType;       //!< If the header is explicit, it will be transmitted in the LORA packet. If the header is implicit, it will not be transmitted
+            uint8_t                       PayloadLength;    //!< Size of the payload in the LORA packet
+            RadioLoRaCrcModes_t           Crc;              //!< Size of CRC block in LORA packet
+            RadioLoRaIQModes_t            InvertIQ;         //!< Allows to swap IQ for LORA packet
         }LoRa;
         /*!
          * \brief Holds the FLRC packet parameters
@@ -800,8 +806,8 @@ typedef struct
         struct
         {
             RadioBleConnectionStates_t    ConnectionState;   //!< The BLE state
-            RadioBleCrcFields_t           CrcField;          //!< Size of the CRC block in the BLE packet
-            RadioBlePacketTypes_t         BlePacketType;     //!< Special BLE packet types
+            RadioBleCrcTypes_t            CrcLength;         //!< Size of the CRC block in the BLE packet
+            RadioBleTestPayloads_t        BleTestPayload;    //!< Special BLE payload for test purpose
             RadioWhiteningModes_t         Whitening;         //!< Usage of whitening on PDU and CRC blocks of BLE packet
         }Ble;
     }Params;                                                 //!< Holds the packet parameters structure
@@ -839,22 +845,6 @@ typedef struct
         {
             int8_t RssiPkt;                                 //!< The RSSI of the last packet
             int8_t SnrPkt;                                  //!< The SNR of the last packet
-            struct
-            {
-                bool SyncError :1;                          //!< SyncWord error on last packet
-                bool LengthError :1;                        //!< Length error on last packet
-                bool CrcError :1;                           //!< CRC error on last packet
-                bool AbortError :1;                         //!< Abort error on last packet
-                bool HeaderReceived :1;                     //!< Header received on last packet
-                bool PacketReceived :1;                     //!< Packet received
-                bool PacketControlerBusy :1;                //!< Packet controller busy
-            }ErrorStatus;                                   //!< The error status Byte
-            struct
-            {
-                bool RxNoAck :1;                            //!< No acknowledgment received for Rx with variable length packets
-                bool PacketSent :1;                         //!< Packet sent, only relevant in Tx mode
-            }TxRxStatus;                                    //!< The Tx/Rx status Byte
-            uint8_t SyncAddrStatus :3;                      //!< The id of the correlator who found the packet
         }LoRa;
         struct
         {
@@ -963,13 +953,14 @@ public:
      *                             all callbacks function pointers
      */
     SX1280( RadioCallbacks_t *callbacks ):
-        Radio( callbacks )
+        // The class members are value-initialiazed in member-initilaizer list
+        Radio( callbacks ), OperatingMode( MODE_STDBY_RC ), PacketType( PACKET_TYPE_NONE ),
+        LoRaBandwidth( LORA_BW_1600 ), IrqState( false ), PollingMode( false )
     {
         this->dioIrq        = &SX1280::OnDioIrq;
-        this->PacketType    = PACKET_TYPE_NONE;
-        this->LoRaBandwidth = LORA_BW_0200;           // This value is not set to the radio!
-        this->PollingMode   = false;
-        this->IrqState      = false;
+
+        // Warning: this constructor set the LoRaBandwidth member to a valid
+        // value, but it is not related to the actual radio configuration!
     }
 
     virtual ~SX1280( )
@@ -1011,8 +1002,8 @@ private:
      * \brief Compute the two's complement for a register of size lower than
      *        32bits
      *
-     * \param [in]  num            The register to be two's complemented
-     * \param [in]  bitCnt         The position of the sign bit
+     * \param [in]  num           The register to be two's complemented
+     * \param [in]  bitCnt        The position of the sign bit
      */
     static int32_t complement2( const uint32_t num, const uint8_t bitCnt );
 
@@ -1023,7 +1014,7 @@ private:
      * type. Most computation should be done as integer to reduce floating
      * point related errors.
      *
-     * \retval loRaBw              The value of the current bandwidth in Hz
+     * \retval loRaBw             The value of the current bandwidth in Hz
      */
     int32_t GetLoRaBandwidth( void );
 
@@ -1256,11 +1247,11 @@ public:
     /*!
      * \brief Sets the Rx duty cycle management parameters
      *
-     * \param [in]  step          Step time size for Rx and Sleep TickTime sequences
-     * \param [in]  nbStepRx      Number of step time size for Rx TickTime sequence
-     * \param [in]  nbStepSleep   Number of step time size for Sleep TickTime sequence
+     * \param [in]  periodBase             Base time for Rx and Sleep TickTime sequences
+     * \param [in]  periodBaseCountRx      Number of base time for Rx TickTime sequence
+     * \param [in]  periodBaseCountSleep   Number of base time for Sleep TickTime sequence
      */
-    void SetRxDutyCycle( RadioTickSizes_t step, uint16_t nbStepRx, uint16_t nbStepSleep );
+    void SetRxDutyCycle( RadioTickSizes_t periodBase, uint16_t periodBaseCountRx, uint16_t periodBaseCountSleep );
 
     /*!
      * \brief Sets the radio in CAD mode
@@ -1294,18 +1285,29 @@ public:
     /*!
      * \brief Gets the current radio protocol
      *
-     * \retval      packetType    [PACKET_TYPE_GFSK, PACKET_TYPE_LORA,
+     * Default behavior return the packet type returned by the radio. To
+     * reduce the SPI activity and return the packet type stored by the
+     * driver, a second optional argument must be provided evaluating as true
+     * boolean
+     *
+     * \param [in]  isLazy        If true, the packet type returned is the last
+     *                            saved in the driver
+     *                            If false, the packet type is obtained from
+     *                            the chip
+     *                            Default: false
+     *
+     * \retval      packetType    [PACKET_TYPE_GENERIC, PACKET_TYPE_LR24,
      *                             PACKET_TYPE_RANGING, PACKET_TYPE_FLRC,
      *                             PACKET_TYPE_BLE, PACKET_TYPE_NONE]
      */
-    RadioPacketTypes_t GetPacketType( void );
+    RadioPacketTypes_t GetPacketType( bool isLazy = false );
 
     /*!
      * \brief Sets the RF frequency
      *
-     * \param [in]  frequency     RF frequency [Hz]
+     * \param [in]  rfFrequency   RF frequency [Hz]
      */
-    void SetRfFrequency( uint32_t frequency );
+    void SetRfFrequency( uint32_t rfFrequency );
 
     /*!
      * \brief Sets the transmission parameters
@@ -1320,8 +1322,8 @@ public:
      *        Detection operation
      *
      * \param [in]  cadSymbolNum  The number of symbol to use for Channel Activity
-     *                            Detection operations [LORA_CAD_01_SYMBOL, LORA_CAD_02_SYMBOL,
-     *                            LORA_CAD_04_SYMBOL, LORA_CAD_08_SYMBOL, LORA_CAD_16_SYMBOL]
+     *                            Detection operations [LORA_CAD_01_SYMBOL, LORA_CAD_02_SYMBOLS,
+     *                            LORA_CAD_04_SYMBOLS, LORA_CAD_08_SYMBOLS, LORA_CAD_16_SYMBOLS]
      */
     void SetCadParams( RadioLoRaCadSymbols_t cadSymbolNum );
 
@@ -1350,17 +1352,17 @@ public:
     /*!
      * \brief Gets the last received packet buffer status
      *
-     * \param [out] payloadLength Last received packet payload length
-     * \param [out] rxStartBuffer Last received packet buffer address pointer
+     * \param [out] rxPayloadLength       Last received packet payload length
+     * \param [out] rxStartBufferPointer  Last received packet buffer address pointer
      */
-    void GetRxBufferStatus( uint8_t *payloadLength, uint8_t *rxStartBuffer );
+    void GetRxBufferStatus( uint8_t *rxPayloadLength, uint8_t *rxStartBufferPointer );
 
     /*!
      * \brief Gets the last received packet payload length
      *
-     * \param [out] pktStatus     A structure of packet status
+     * \param [out] packetStatus  A structure of packet status
      */
-    void GetPacketStatus( PacketStatus_t *pktStatus );
+    void GetPacketStatus( PacketStatus_t *packetStatus );
 
     /*!
      * \brief Returns the instantaneous RSSI value for the last packet received
@@ -1389,9 +1391,9 @@ public:
     /*!
      * \brief Clears the IRQs
      *
-     * \param [in]  irq           IRQ(s) to be cleared
+     * \param [in]  irqMask       IRQ(s) to be cleared
      */
-    void ClearIrqStatus( uint16_t irq );
+    void ClearIrqStatus( uint16_t irqMask );
 
     /*!
      * \brief Calibrates the given radio block
@@ -1489,8 +1491,10 @@ public:
      *
      * \param [in]  seed          Initial LFSR value ( 4 bytes )
      *
+     * \retval      updated       [0: failure, 1: success]
+     *
      */
-    void SetCrcSeed( uint16_t seed );
+    uint8_t SetCrcSeed( uint8_t *seed );
 
     /*!
      * \brief Sets the seed used for the CRC calculation
@@ -1587,6 +1591,13 @@ public:
      *        depending on radio state
      */
     void ProcessIrqs( void );
+
+    /*!
+     * \brief Force the preamble length in GFSK and BLE mode
+     *
+     * \param [in]  preambleLength  The desired preamble length
+     */
+    void ForcePreambleLength( RadioPreambleLengths_t preambleLength );
 };
 
 #endif // __SX1280_H__

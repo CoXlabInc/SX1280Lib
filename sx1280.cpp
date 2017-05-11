@@ -66,7 +66,7 @@ void SX1280::SetRegistersDefault( void )
 
 uint16_t SX1280::GetFirmwareVersion( void )
 {
-    return( ( ( ReadRegister( 0x0153 ) ) << 8 ) | ( ReadRegister( 0x0154 ) ) );
+    return( ( ( ReadRegister( 0xA8 ) ) << 8 ) | ( ReadRegister( 0xA9 ) ) );
 }
 
 RadioStatus_t SX1280::GetStatus( void )
@@ -117,15 +117,15 @@ void SX1280::SetFs( void )
 void SX1280::SetTx( TickTime_t timeout )
 {
     uint8_t buf[3];
-    buf[0] = timeout.Step;
-    buf[1] = ( uint8_t )( ( timeout.NbSteps >> 8 ) & 0x00FF );
-    buf[2] = ( uint8_t )( timeout.NbSteps & 0x00FF );
+    buf[0] = timeout.PeriodBase;
+    buf[1] = ( uint8_t )( ( timeout.PeriodBaseCount >> 8 ) & 0x00FF );
+    buf[2] = ( uint8_t )( timeout.PeriodBaseCount & 0x00FF );
 
     ClearIrqStatus( IRQ_RADIO_ALL );
-    
+
     // If the radio is doing ranging operations, then apply the specific calls
     // prior to SetTx
-    if( GetPacketType( ) == PACKET_TYPE_RANGING )
+    if( GetPacketType( true ) == PACKET_TYPE_RANGING )
     {
         SetRangingRole( RADIO_RANGING_ROLE_MASTER );
     }
@@ -136,15 +136,15 @@ void SX1280::SetTx( TickTime_t timeout )
 void SX1280::SetRx( TickTime_t timeout )
 {
     uint8_t buf[3];
-    buf[0] = timeout.Step;
-    buf[1] = ( uint8_t )( ( timeout.NbSteps >> 8 ) & 0x00FF );
-    buf[2] = ( uint8_t )( timeout.NbSteps & 0x00FF );
+    buf[0] = timeout.PeriodBase;
+    buf[1] = ( uint8_t )( ( timeout.PeriodBaseCount >> 8 ) & 0x00FF );
+    buf[2] = ( uint8_t )( timeout.PeriodBaseCount & 0x00FF );
 
     ClearIrqStatus( IRQ_RADIO_ALL );
-    
+
     // If the radio is doing ranging operations, then apply the specific calls
     // prior to SetRx
-    if( GetPacketType( ) == PACKET_TYPE_RANGING )
+    if( GetPacketType( true ) == PACKET_TYPE_RANGING )
     {
         SetRangingRole( RADIO_RANGING_ROLE_SLAVE );
     }
@@ -152,15 +152,15 @@ void SX1280::SetRx( TickTime_t timeout )
     OperatingMode = MODE_RX;
 }
 
-void SX1280::SetRxDutyCycle( RadioTickSizes_t step, uint16_t nbStepRx, uint16_t nbStepSleep )
+void SX1280::SetRxDutyCycle( RadioTickSizes_t periodBase, uint16_t periodBaseCountRx, uint16_t periodBaseCountSleep )
 {
     uint8_t buf[5];
 
-    buf[0] = step;
-    buf[1] = ( uint8_t )( ( nbStepRx >> 8 ) & 0x00FF );
-    buf[2] = ( uint8_t )( nbStepRx & 0x00FF );
-    buf[3] = ( uint8_t )( ( nbStepSleep >> 8 ) & 0x00FF );
-    buf[4] = ( uint8_t )( nbStepSleep & 0x00FF );
+    buf[0] = periodBase;
+    buf[1] = ( uint8_t )( ( periodBaseCountRx >> 8 ) & 0x00FF );
+    buf[2] = ( uint8_t )( periodBaseCountRx & 0x00FF );
+    buf[3] = ( uint8_t )( ( periodBaseCountSleep >> 8 ) & 0x00FF );
+    buf[4] = ( uint8_t )( periodBaseCountSleep & 0x00FF );
     WriteCommand( RADIO_SET_RXDUTYCYCLE, buf, 5 );
     OperatingMode = MODE_RX;
 }
@@ -189,17 +189,30 @@ void SX1280::SetPacketType( RadioPacketTypes_t packetType )
     WriteCommand( RADIO_SET_PACKETTYPE, ( uint8_t* )&packetType, 1 );
 }
 
-RadioPacketTypes_t SX1280::GetPacketType( void )
+RadioPacketTypes_t SX1280::GetPacketType( bool isLazy )
 {
-    return this->PacketType;
+    RadioPacketTypes_t packetType = PACKET_TYPE_NONE;
+    if( isLazy == false )
+    {
+        ReadCommand( RADIO_GET_PACKETTYPE, ( uint8_t* )&packetType, 1 );
+        if( this->PacketType != packetType )
+        {
+            this->PacketType = packetType;
+        }
+    }
+    else
+    {
+        packetType = this->PacketType;
+    }
+    return packetType;
 }
 
-void SX1280::SetRfFrequency( uint32_t frequency )
+void SX1280::SetRfFrequency( uint32_t rfFrequency )
 {
     uint8_t buf[3];
     uint32_t freq = 0;
 
-    freq = ( uint32_t )( ( double )frequency / ( double )FREQ_STEP );
+    freq = ( uint32_t )( ( double )rfFrequency / ( double )FREQ_STEP );
     buf[0] = ( uint8_t )( ( freq >> 16 ) & 0xFF );
     buf[1] = ( uint8_t )( ( freq >> 8 ) & 0xFF );
     buf[2] = ( uint8_t )( freq & 0xFF );
@@ -232,40 +245,40 @@ void SX1280::SetBufferBaseAddresses( uint8_t txBaseAddress, uint8_t rxBaseAddres
     WriteCommand( RADIO_SET_BUFFERBASEADDRESS, buf, 2 );
 }
 
-void SX1280::SetModulationParams( ModulationParams_t *modulationParams )
+void SX1280::SetModulationParams( ModulationParams_t *modParams )
 {
     uint8_t buf[3];
 
     // Check if required configuration corresponds to the stored packet type
     // If not, silently update radio packet type
-    if( this->PacketType != modulationParams->PacketType )
+    if( this->PacketType != modParams->PacketType )
     {
-        this->SetPacketType( modulationParams->PacketType );
+        this->SetPacketType( modParams->PacketType );
     }
 
-    switch( modulationParams->PacketType )
+    switch( modParams->PacketType )
     {
         case PACKET_TYPE_GFSK:
-            buf[0] = modulationParams->Params.Gfsk.BitrateBandwidth;
-            buf[1] = modulationParams->Params.Gfsk.ModulationIndex;
-            buf[2] = modulationParams->Params.Gfsk.ModulationShaping;
+            buf[0] = modParams->Params.Gfsk.BitrateBandwidth;
+            buf[1] = modParams->Params.Gfsk.ModulationIndex;
+            buf[2] = modParams->Params.Gfsk.ModulationShaping;
             break;
         case PACKET_TYPE_LORA:
         case PACKET_TYPE_RANGING:
-            buf[0] = modulationParams->Params.LoRa.SpreadingFactor;
-            buf[1] = modulationParams->Params.LoRa.Bandwidth;
-            buf[2] = modulationParams->Params.LoRa.CodingRate;
-            this->LoRaBandwidth = modulationParams->Params.LoRa.Bandwidth;
+            buf[0] = modParams->Params.LoRa.SpreadingFactor;
+            buf[1] = modParams->Params.LoRa.Bandwidth;
+            buf[2] = modParams->Params.LoRa.CodingRate;
+            this->LoRaBandwidth = modParams->Params.LoRa.Bandwidth;
             break;
         case PACKET_TYPE_FLRC:
-            buf[0] = modulationParams->Params.Flrc.BitrateBandwidth;
-            buf[1] = modulationParams->Params.Flrc.CodingRate;
-            buf[2] = modulationParams->Params.Flrc.ModulationShaping;
+            buf[0] = modParams->Params.Flrc.BitrateBandwidth;
+            buf[1] = modParams->Params.Flrc.CodingRate;
+            buf[2] = modParams->Params.Flrc.ModulationShaping;
             break;
         case PACKET_TYPE_BLE:
-            buf[0] = modulationParams->Params.Ble.BitrateBandwidth;
-            buf[1] = modulationParams->Params.Ble.ModulationIndex;
-            buf[2] = modulationParams->Params.Ble.ModulationShaping;
+            buf[0] = modParams->Params.Ble.BitrateBandwidth;
+            buf[1] = modParams->Params.Ble.ModulationIndex;
+            buf[2] = modParams->Params.Ble.ModulationShaping;
             break;
         case PACKET_TYPE_NONE:
             buf[0] = NULL;
@@ -302,7 +315,7 @@ void SX1280::SetPacketParams( PacketParams_t *packetParams )
             buf[0] = packetParams->Params.LoRa.PreambleLength;
             buf[1] = packetParams->Params.LoRa.HeaderType;
             buf[2] = packetParams->Params.LoRa.PayloadLength;
-            buf[3] = packetParams->Params.LoRa.CrcMode;
+            buf[3] = packetParams->Params.LoRa.Crc;
             buf[4] = packetParams->Params.LoRa.InvertIQ;
             buf[5] = NULL;
             buf[6] = NULL;
@@ -318,8 +331,8 @@ void SX1280::SetPacketParams( PacketParams_t *packetParams )
             break;
         case PACKET_TYPE_BLE:
             buf[0] = packetParams->Params.Ble.ConnectionState;
-            buf[1] = packetParams->Params.Ble.CrcField;
-            buf[2] = packetParams->Params.Ble.BlePacketType;
+            buf[1] = packetParams->Params.Ble.CrcLength;
+            buf[2] = packetParams->Params.Ble.BleTestPayload;
             buf[3] = packetParams->Params.Ble.Whitening;
             buf[4] = NULL;
             buf[5] = NULL;
@@ -338,111 +351,103 @@ void SX1280::SetPacketParams( PacketParams_t *packetParams )
     WriteCommand( RADIO_SET_PACKETPARAMS, buf, 7 );
 }
 
-void SX1280::GetRxBufferStatus( uint8_t *payloadLength, uint8_t *rxStartBufferPointer )
+void SX1280::ForcePreambleLength( RadioPreambleLengths_t preambleLength )
+{
+    this->WriteRegister( REG_LR_PREAMBLELENGTH, ( this->ReadRegister( REG_LR_PREAMBLELENGTH ) & MASK_FORCE_PREAMBLELENGTH ) | preambleLength );
+}
+
+void SX1280::GetRxBufferStatus( uint8_t *rxPayloadLength, uint8_t *rxStartBufferPointer )
 {
     uint8_t status[2];
 
     ReadCommand( RADIO_GET_RXBUFFERSTATUS, status, 2 );
 
-    // In case of LORA fixed header, the payloadLength is obtained by reading
+    // In case of LORA fixed header, the rxPayloadLength is obtained by reading
     // the register REG_LR_PAYLOADLENGTH
-    if( ( this -> GetPacketType( ) == PACKET_TYPE_LORA ) && ( ReadRegister( REG_LR_PACKETPARAMS ) >> 7 == 1 ) )
+    if( ( this -> GetPacketType( true ) == PACKET_TYPE_LORA ) && ( ReadRegister( REG_LR_PACKETPARAMS ) >> 7 == 1 ) )
     {
-        *payloadLength = ReadRegister( REG_LR_PAYLOADLENGTH );
+        *rxPayloadLength = ReadRegister( REG_LR_PAYLOADLENGTH );
     }
     else
     {
-        *payloadLength = status[0];
+        *rxPayloadLength = status[0];
     }
 
     *rxStartBufferPointer = status[1];
 }
 
-void SX1280::GetPacketStatus( PacketStatus_t *pktStatus )
+void SX1280::GetPacketStatus( PacketStatus_t *packetStatus )
 {
     uint8_t status[5];
 
     ReadCommand( RADIO_GET_PACKETSTATUS, status, 5 );
 
-    pktStatus->packetType = this -> GetPacketType( );
-    switch( pktStatus->packetType )
+    packetStatus->packetType = this -> GetPacketType( true );
+    switch( packetStatus->packetType )
     {
         case PACKET_TYPE_GFSK:
-            pktStatus->Gfsk.RssiSync = -( status[1] / 2 );
+            packetStatus->Gfsk.RssiSync = -( status[1] / 2 );
 
-            pktStatus->Gfsk.ErrorStatus.SyncError = ( status[2] >> 6 ) & 0x01;
-            pktStatus->Gfsk.ErrorStatus.LengthError = ( status[2] >> 5 ) & 0x01;
-            pktStatus->Gfsk.ErrorStatus.CrcError = ( status[2] >> 4 ) & 0x01;
-            pktStatus->Gfsk.ErrorStatus.AbortError = ( status[2] >> 3 ) & 0x01;
-            pktStatus->Gfsk.ErrorStatus.HeaderReceived = ( status[2] >> 2 ) & 0x01;
-            pktStatus->Gfsk.ErrorStatus.PacketReceived = ( status[2] >> 1 ) & 0x01;
-            pktStatus->Gfsk.ErrorStatus.PacketControlerBusy = status[2] & 0x01;
+            packetStatus->Gfsk.ErrorStatus.SyncError = ( status[2] >> 6 ) & 0x01;
+            packetStatus->Gfsk.ErrorStatus.LengthError = ( status[2] >> 5 ) & 0x01;
+            packetStatus->Gfsk.ErrorStatus.CrcError = ( status[2] >> 4 ) & 0x01;
+            packetStatus->Gfsk.ErrorStatus.AbortError = ( status[2] >> 3 ) & 0x01;
+            packetStatus->Gfsk.ErrorStatus.HeaderReceived = ( status[2] >> 2 ) & 0x01;
+            packetStatus->Gfsk.ErrorStatus.PacketReceived = ( status[2] >> 1 ) & 0x01;
+            packetStatus->Gfsk.ErrorStatus.PacketControlerBusy = status[2] & 0x01;
 
-            pktStatus->Gfsk.TxRxStatus.RxNoAck = ( status[3] >> 5 ) & 0x01;
-            pktStatus->Gfsk.TxRxStatus.PacketSent = status[3] & 0x01;
+            packetStatus->Gfsk.TxRxStatus.RxNoAck = ( status[3] >> 5 ) & 0x01;
+            packetStatus->Gfsk.TxRxStatus.PacketSent = status[3] & 0x01;
 
-            pktStatus->Gfsk.SyncAddrStatus = status[4] & 0x07;
+            packetStatus->Gfsk.SyncAddrStatus = status[4] & 0x07;
             break;
 
         case PACKET_TYPE_LORA:
         case PACKET_TYPE_RANGING:
-            pktStatus->LoRa.RssiPkt = -( status[0] / 2 );
-            ( status[1] < 128 ) ? ( pktStatus->LoRa.SnrPkt = status[1] / 4 ) : ( pktStatus->LoRa.SnrPkt = ( ( status[1] - 256 ) /4 ) );
-
-            pktStatus->LoRa.ErrorStatus.SyncError = ( status[2] >> 6 ) & 0x01;
-            pktStatus->LoRa.ErrorStatus.LengthError = ( status[2] >> 5 ) & 0x01;
-            pktStatus->LoRa.ErrorStatus.CrcError = ( status[2] >> 4 ) & 0x01;
-            pktStatus->LoRa.ErrorStatus.AbortError = ( status[2] >> 3 ) & 0x01;
-            pktStatus->LoRa.ErrorStatus.HeaderReceived = ( status[2] >> 2 ) & 0x01;
-            pktStatus->LoRa.ErrorStatus.PacketReceived = ( status[2] >> 1 ) & 0x01;
-            pktStatus->LoRa.ErrorStatus.PacketControlerBusy = status[2] & 0x01;
-
-            pktStatus->LoRa.TxRxStatus.RxNoAck = ( status[3] >> 5 ) & 0x01;
-            pktStatus->LoRa.TxRxStatus.PacketSent = status[3] & 0x01;
-
-            pktStatus->LoRa.SyncAddrStatus = status[4] & 0x07;
+            packetStatus->LoRa.RssiPkt = -( status[0] / 2 );
+            ( status[1] < 128 ) ? ( packetStatus->LoRa.SnrPkt = status[1] / 4 ) : ( packetStatus->LoRa.SnrPkt = ( ( status[1] - 256 ) /4 ) );
             break;
 
         case PACKET_TYPE_FLRC:
-            pktStatus->Flrc.RssiSync = -( status[1] / 2 );
+            packetStatus->Flrc.RssiSync = -( status[1] / 2 );
 
-            pktStatus->Flrc.ErrorStatus.SyncError = ( status[2] >> 6 ) & 0x01;
-            pktStatus->Flrc.ErrorStatus.LengthError = ( status[2] >> 5 ) & 0x01;
-            pktStatus->Flrc.ErrorStatus.CrcError = ( status[2] >> 4 ) & 0x01;
-            pktStatus->Flrc.ErrorStatus.AbortError = ( status[2] >> 3 ) & 0x01;
-            pktStatus->Flrc.ErrorStatus.HeaderReceived = ( status[2] >> 2 ) & 0x01;
-            pktStatus->Flrc.ErrorStatus.PacketReceived = ( status[2] >> 1 ) & 0x01;
-            pktStatus->Flrc.ErrorStatus.PacketControlerBusy = status[2] & 0x01;
+            packetStatus->Flrc.ErrorStatus.SyncError = ( status[2] >> 6 ) & 0x01;
+            packetStatus->Flrc.ErrorStatus.LengthError = ( status[2] >> 5 ) & 0x01;
+            packetStatus->Flrc.ErrorStatus.CrcError = ( status[2] >> 4 ) & 0x01;
+            packetStatus->Flrc.ErrorStatus.AbortError = ( status[2] >> 3 ) & 0x01;
+            packetStatus->Flrc.ErrorStatus.HeaderReceived = ( status[2] >> 2 ) & 0x01;
+            packetStatus->Flrc.ErrorStatus.PacketReceived = ( status[2] >> 1 ) & 0x01;
+            packetStatus->Flrc.ErrorStatus.PacketControlerBusy = status[2] & 0x01;
 
-            pktStatus->Flrc.TxRxStatus.RxPid = ( status[3] >> 6 ) & 0x03;
-            pktStatus->Flrc.TxRxStatus.RxNoAck = ( status[3] >> 5 ) & 0x01;
-            pktStatus->Flrc.TxRxStatus.RxPidErr = ( status[3] >> 4 ) & 0x01;
-            pktStatus->Flrc.TxRxStatus.PacketSent = status[3] & 0x01;
+            packetStatus->Flrc.TxRxStatus.RxPid = ( status[3] >> 6 ) & 0x03;
+            packetStatus->Flrc.TxRxStatus.RxNoAck = ( status[3] >> 5 ) & 0x01;
+            packetStatus->Flrc.TxRxStatus.RxPidErr = ( status[3] >> 4 ) & 0x01;
+            packetStatus->Flrc.TxRxStatus.PacketSent = status[3] & 0x01;
 
-            pktStatus->Flrc.SyncAddrStatus = status[4] & 0x07;
+            packetStatus->Flrc.SyncAddrStatus = status[4] & 0x07;
             break;
 
         case PACKET_TYPE_BLE:
-            pktStatus->Ble.RssiSync =  -( status[1] / 2 );
+            packetStatus->Ble.RssiSync =  -( status[1] / 2 );
 
-            pktStatus->Ble.ErrorStatus.SyncError = ( status[2] >> 6 ) & 0x01;
-            pktStatus->Ble.ErrorStatus.LengthError = ( status[2] >> 5 ) & 0x01;
-            pktStatus->Ble.ErrorStatus.CrcError = ( status[2] >> 4 ) & 0x01;
-            pktStatus->Ble.ErrorStatus.AbortError = ( status[2] >> 3 ) & 0x01;
-            pktStatus->Ble.ErrorStatus.HeaderReceived = ( status[2] >> 2 ) & 0x01;
-            pktStatus->Ble.ErrorStatus.PacketReceived = ( status[2] >> 1 ) & 0x01;
-            pktStatus->Ble.ErrorStatus.PacketControlerBusy = status[2] & 0x01;
+            packetStatus->Ble.ErrorStatus.SyncError = ( status[2] >> 6 ) & 0x01;
+            packetStatus->Ble.ErrorStatus.LengthError = ( status[2] >> 5 ) & 0x01;
+            packetStatus->Ble.ErrorStatus.CrcError = ( status[2] >> 4 ) & 0x01;
+            packetStatus->Ble.ErrorStatus.AbortError = ( status[2] >> 3 ) & 0x01;
+            packetStatus->Ble.ErrorStatus.HeaderReceived = ( status[2] >> 2 ) & 0x01;
+            packetStatus->Ble.ErrorStatus.PacketReceived = ( status[2] >> 1 ) & 0x01;
+            packetStatus->Ble.ErrorStatus.PacketControlerBusy = status[2] & 0x01;
 
-            pktStatus->Ble.TxRxStatus.PacketSent = status[3] & 0x01;
+            packetStatus->Ble.TxRxStatus.PacketSent = status[3] & 0x01;
 
-            pktStatus->Ble.SyncAddrStatus = status[4] & 0x07;
+            packetStatus->Ble.SyncAddrStatus = status[4] & 0x07;
             break;
 
         case PACKET_TYPE_NONE:
-            // In that specific case, we set everything in the pktStatus to zeros
+            // In that specific case, we set everything in the packetStatus to zeros
             // and reset the packet type accordingly
-            memset( pktStatus, 0, sizeof( PacketStatus_t ) );
-            pktStatus->packetType = PACKET_TYPE_NONE;
+            memset( packetStatus, 0, sizeof( PacketStatus_t ) );
+            packetStatus->packetType = PACKET_TYPE_NONE;
             break;
     }
 }
@@ -478,12 +483,12 @@ uint16_t SX1280::GetIrqStatus( void )
     return ( irqStatus[0] << 8 ) | irqStatus[1];
 }
 
-void SX1280::ClearIrqStatus( uint16_t irq )
+void SX1280::ClearIrqStatus( uint16_t irqMask )
 {
     uint8_t buf[2];
 
-    buf[0] = ( uint8_t )( ( ( uint16_t )irq >> 8 ) & 0x00FF );
-    buf[1] = ( uint8_t )( ( uint16_t )irq & 0x00FF );
+    buf[0] = ( uint8_t )( ( ( uint16_t )irqMask >> 8 ) & 0x00FF );
+    buf[1] = ( uint8_t )( ( uint16_t )irqMask & 0x00FF );
     WriteCommand( RADIO_CLR_IRQSTATUS, buf, 2 );
 }
 
@@ -557,7 +562,7 @@ uint8_t SX1280::SetSyncWord( uint8_t syncWordIdx, uint8_t *syncWord )
     uint16_t addr;
     uint8_t syncwordSize = 0;
 
-    switch( GetPacketType( ) )
+    switch( GetPacketType( true ) )
     {
         case PACKET_TYPE_GFSK:
             syncwordSize = 5;
@@ -621,22 +626,26 @@ void SX1280::SetSyncWordErrorTolerance( uint8_t ErrorBits )
     WriteRegister( REG_LR_SYNCWORDTOLERANCE, ErrorBits );
 }
 
-void SX1280::SetCrcSeed( uint16_t seed )
+uint8_t SX1280::SetCrcSeed( uint8_t *seed )
 {
-    uint8_t val[2];
-
-    val[0] = ( uint8_t )( seed >> 8 ) & 0xFF;
-    val[1] = ( uint8_t )( seed  & 0xFF );
-
-    switch( GetPacketType( ) )
+    uint8_t updated = 0;
+    switch( GetPacketType( true ) )
     {
         case PACKET_TYPE_GFSK:
         case PACKET_TYPE_FLRC:
-            WriteRegister( REG_LR_CRCSEEDBASEADDR, val, 2 );
+            WriteRegister( REG_LR_CRCSEEDBASEADDR, seed, 2 );
+            updated = 1;
+            break;
+        case PACKET_TYPE_BLE:
+            this->WriteRegister(0x9c7, seed[2] );
+            this->WriteRegister(0x9c8, seed[1] );
+            this->WriteRegister(0x9c9, seed[0] );
+            updated = 1;
             break;
         default:
             break;
     }
+    return updated;
 }
 
 void SX1280::SetCrcPolynomial( uint16_t polynomial )
@@ -646,7 +655,7 @@ void SX1280::SetCrcPolynomial( uint16_t polynomial )
     val[0] = ( uint8_t )( polynomial >> 8 ) & 0xFF;
     val[1] = ( uint8_t )( polynomial  & 0xFF );
 
-    switch( GetPacketType( ) )
+    switch( GetPacketType( true ) )
     {
         case PACKET_TYPE_GFSK:
         case PACKET_TYPE_FLRC:
@@ -659,7 +668,7 @@ void SX1280::SetCrcPolynomial( uint16_t polynomial )
 
 void SX1280::SetWhiteningSeed( uint8_t seed )
 {
-    switch( GetPacketType( ) )
+    switch( GetPacketType( true ) )
     {
         case PACKET_TYPE_GFSK:
         case PACKET_TYPE_FLRC:
@@ -673,7 +682,7 @@ void SX1280::SetWhiteningSeed( uint8_t seed )
 
 void SX1280::SetRangingIdLength( RadioRangingIdCheckLengths_t length )
 {
-    switch( GetPacketType( ) )
+    switch( GetPacketType( true ) )
     {
         case PACKET_TYPE_RANGING:
             WriteRegister( REG_LR_RANGINGIDCHECKLENGTH, ( ( ( ( uint8_t )length ) & 0x03 ) << 6 ) | ( ReadRegister( REG_LR_RANGINGIDCHECKLENGTH ) & 0x3F ) );
@@ -687,7 +696,7 @@ void SX1280::SetDeviceRangingAddress( uint32_t address )
 {
     uint8_t addrArray[] = { address >> 24, address >> 16, address >> 8, address };
 
-    switch( GetPacketType( ) )
+    switch( GetPacketType( true ) )
     {
         case PACKET_TYPE_RANGING:
             WriteRegister( REG_LR_DEVICERANGINGADDR, addrArray, 4 );
@@ -701,7 +710,7 @@ void SX1280::SetRangingRequestAddress( uint32_t address )
 {
     uint8_t addrArray[] = { address >> 24, address >> 16, address >> 8, address };
 
-    switch( GetPacketType( ) )
+    switch( GetPacketType( true ) )
     {
         case PACKET_TYPE_RANGING:
             WriteRegister( REG_LR_REQUESTRANGINGADDR, addrArray, 4 );
@@ -716,7 +725,7 @@ double SX1280::GetRangingResult( RadioRangingResultTypes_t resultType )
     uint32_t valLsb = 0;
     double val = 0.0;
 
-    switch( GetPacketType( ) )
+    switch( GetPacketType( true ) )
     {
         case PACKET_TYPE_RANGING:
             this->SetStandby( STDBY_XOSC );
@@ -754,7 +763,7 @@ double SX1280::GetRangingResult( RadioRangingResultTypes_t resultType )
 
 void SX1280::SetRangingCalibration( uint16_t cal )
 {
-    switch( GetPacketType( ) )
+    switch( GetPacketType( true ) )
     {
         case PACKET_TYPE_RANGING:
             WriteRegister( REG_LR_RANGINGRERXTXDELAYCAL, ( uint8_t )( ( cal >> 8 ) & 0xFF ) );
@@ -794,7 +803,7 @@ double SX1280::GetFrequencyError( )
     uint32_t efe = 0;
     double efeHz = 0.0;
 
-    switch( this->GetPacketType( ) )
+    switch( this->GetPacketType( true ) )
     {
         case PACKET_TYPE_LORA:
         case PACKET_TYPE_RANGING:
@@ -896,7 +905,7 @@ void SX1280::ProcessIrqs( void )
         }
     }
 
-    packetType = GetPacketType( );
+    packetType = GetPacketType( true );
     uint16_t irqRegs = GetIrqStatus( );
     ClearIrqStatus( IRQ_RADIO_ALL );
 
@@ -1057,7 +1066,7 @@ void SX1280::ProcessIrqs( void )
                 case MODE_CAD:
                     if( ( irqRegs & IRQ_CAD_DONE ) == IRQ_CAD_DONE )
                     {
-                        if( ( irqRegs & IRQ_CAD_ACTIVITY_DETECTED ) == IRQ_CAD_ACTIVITY_DETECTED )
+                        if( ( irqRegs & IRQ_CAD_DETECTED ) == IRQ_CAD_DETECTED )
                         {
                             if( cadDone != NULL )
                             {
@@ -1135,7 +1144,7 @@ void SX1280::ProcessIrqs( void )
                     break;
                 // MODE_TX indicates an IRQ on the Master side
                 case MODE_TX:
-                    if( ( irqRegs & IRQ_RANGING_MASTER_RESULT_TIMEOUT ) == IRQ_RANGING_MASTER_RESULT_TIMEOUT )
+                    if( ( irqRegs & IRQ_RANGING_MASTER_TIMEOUT ) == IRQ_RANGING_MASTER_TIMEOUT )
                     {
                         if( rangingDone != NULL )
                         {
