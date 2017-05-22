@@ -1290,17 +1290,17 @@ public:
      * driver, a second optional argument must be provided evaluating as true
      * boolean
      *
-     * \param [in]  isLazy        If true, the packet type returned is the last
-     *                            saved in the driver
-     *                            If false, the packet type is obtained from
-     *                            the chip
-     *                            Default: false
+     * \param [in]  returnLocalCopy If true, the packet type returned is the last
+     *                              saved in the driver
+     *                              If false, the packet type is obtained from
+     *                              the chip
+     *                              Default: false
      *
      * \retval      packetType    [PACKET_TYPE_GENERIC, PACKET_TYPE_LR24,
      *                             PACKET_TYPE_RANGING, PACKET_TYPE_FLRC,
      *                             PACKET_TYPE_BLE, PACKET_TYPE_NONE]
      */
-    RadioPacketTypes_t GetPacketType( bool isLazy = false );
+    RadioPacketTypes_t GetPacketType( bool returnLocalCopy = false );
 
     /*!
      * \brief Sets the RF frequency

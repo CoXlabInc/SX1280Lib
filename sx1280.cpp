@@ -189,10 +189,10 @@ void SX1280::SetPacketType( RadioPacketTypes_t packetType )
     WriteCommand( RADIO_SET_PACKETTYPE, ( uint8_t* )&packetType, 1 );
 }
 
-RadioPacketTypes_t SX1280::GetPacketType( bool isLazy )
+RadioPacketTypes_t SX1280::GetPacketType( bool returnLocalCopy )
 {
     RadioPacketTypes_t packetType = PACKET_TYPE_NONE;
-    if( isLazy == false )
+    if( returnLocalCopy == false )
     {
         ReadCommand( RADIO_GET_PACKETTYPE, ( uint8_t* )&packetType, 1 );
         if( this->PacketType != packetType )
