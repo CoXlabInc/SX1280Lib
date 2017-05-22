@@ -740,7 +740,7 @@ double SX1280::GetRangingResult( RadioRangingResultTypes_t resultType )
                 case RANGING_RESULT_RAW:
                     // Convert the ranging LSB to distance in meter
                     // The theoretical conversion from register value to distance [m] is given by:
-                    //distance [m] = ( complement2( register ) * 150 ) / ( 2^12 * bandwidth[MHz] ) )
+                    // distance [m] = ( complement2( register ) * 150 ) / ( 2^12 * bandwidth[MHz] ) )
                     // The API provide BW in [Hz] so the implemented formula is complement2( register ) / bandwidth[Hz] * A,
                     // where A = 150 / (2^12 / 1e6) = 36621.09
                     val = ( double )complement2( valLsb, 24 ) / ( double )this->GetLoRaBandwidth( ) * 36621.09375;
