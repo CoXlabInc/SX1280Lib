@@ -525,7 +525,7 @@ void SX1280::SetAutoTx( uint16_t time )
 
 void SX1280::SetAutoFs( bool enableAutoFs )
 {
-    WriteCommand( RADIO_SET_AUTORX, ( uint8_t * )&enableAutoFs, 1 );
+    WriteCommand( RADIO_SET_AUTOFS, ( uint8_t * )&enableAutoFs, 1 );
 }
 
 void SX1280::SetLongPreamble( bool enable )

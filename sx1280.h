@@ -660,7 +660,7 @@ typedef enum RadioCommands_u
     RADIO_SET_REGULATORMODE                 = 0x96,
     RADIO_SET_SAVECONTEXT                   = 0xD5,
     RADIO_SET_AUTOTX                        = 0x98,
-    RADIO_SET_AUTORX                        = 0x9E,
+    RADIO_SET_AUTOFS                        = 0x9E,
     RADIO_SET_LONGPREAMBLE                  = 0x9B,
     RADIO_SET_UARTSPEED                     = 0x9D,
     RADIO_SET_RANGING_ROLE                  = 0xA3,
