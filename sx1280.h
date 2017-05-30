@@ -1296,7 +1296,7 @@ public:
      *                              the chip
      *                              Default: false
      *
-     * \retval      packetType    [PACKET_TYPE_GENERIC, PACKET_TYPE_LR24,
+     * \retval      packetType    [PACKET_TYPE_GENERIC, PACKET_TYPE_LORA,
      *                             PACKET_TYPE_RANGING, PACKET_TYPE_FLRC,
      *                             PACKET_TYPE_BLE, PACKET_TYPE_NONE]
      */
