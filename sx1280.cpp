@@ -18,17 +18,6 @@ Maintainer: Miguel Luis, Gregory Cristian and Matthieu Verdy
 #include "sx1280-hal.h"
 
 /*!
- * \brief ContinuousMode and SingleMode are two particular values for TickTime.
- * The ContinuousMode keeps the radio in Rx or Tx mode, even after successfull reception
- * or transmission. It should never generate Timeout interrupt.
- * The SingleMode lets the radio enought time to make one reception or transmission.
- * No Timeout interrupt is generated, and the radio fall in StandBy mode after
- * reception or transmission.
-*/
-TickTime_t  ContinuousMode = { RADIO_TICK_SIZE_0015_US, 0xFFFF };
-TickTime_t  SingleMode     = { RADIO_TICK_SIZE_0015_US, 0xFFFF };
-
-/*!
  * \brief Radio registers definition
  *
  */
@@ -66,7 +55,7 @@ void SX1280::SetRegistersDefault( void )
 
 uint16_t SX1280::GetFirmwareVersion( void )
 {
-    return( ( ( ReadRegister( 0xA8 ) ) << 8 ) | ( ReadRegister( 0xA9 ) ) );
+    return( ( ( ReadRegister( REG_LR_FIRMWARE_VERSION_MSB ) ) << 8 ) | ( ReadRegister( REG_LR_FIRMWARE_VERSION_MSB + 1 ) ) );
 }
 
 RadioStatus_t SX1280::GetStatus( void )

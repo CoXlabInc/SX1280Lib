@@ -49,6 +49,11 @@ typedef void ( SX1280Hal::*Trigger )( void );
 #define AUTO_TX_OFFSET                              33
 
 /*!
+ * \brief The address of the register holding the firmware version MSB
+ */
+#define REG_LR_FIRMWARE_VERSION_MSB                 0x0153
+
+/*!
  * \brief The address of the register holding the first byte defining the CRC seed
  *
  * \remark Only used for packet types GFSK and Flrc
