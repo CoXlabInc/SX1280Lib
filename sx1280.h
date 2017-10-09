@@ -184,6 +184,12 @@ typedef void ( SX1280Hal::*Trigger )( void );
 #define MASK_FORCE_PREAMBLELENGTH                   0x8F
 
 /*!
+ * \brief Register for MSB Access Address (BLE)
+ */
+#define REG_LR_BLE_ACCESS_ADDRESS                   0x09CF
+#define BLE_ADVERTIZER_ACCESS_ADDRESS               0x8E89BED6
+
+/*!
  * \brief Represents the states of the radio
  */
 typedef enum
@@ -1500,6 +1506,25 @@ public:
      *
      */
     uint8_t SetCrcSeed( uint8_t *seed );
+
+    /*!
+     * \brief Set the Access Address field of BLE packet
+     *
+     * \param [in]  accessAddress The access address to be used for next BLE packet sent
+     *
+     * \see SX1280::SetBleAdvertizerAccessAddress
+     */
+    void SetBleAccessAddress( uint32_t accessAddress );
+
+    /*!
+     * \brief Set the Access Address for Advertizer BLE packets
+     *
+     * All advertizer BLE packets must use a particular value for Access
+     * Address field. This method sets it.
+     *
+     * \see SX1280::SetBleAccessAddress
+     */
+    void SetBleAdvertizerAccessAddress( void );
 
     /*!
      * \brief Sets the seed used for the CRC calculation

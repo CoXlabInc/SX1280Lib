@@ -357,6 +357,12 @@ void SX1280::GetRxBufferStatus( uint8_t *rxPayloadLength, uint8_t *rxStartBuffer
     {
         *rxPayloadLength = ReadRegister( REG_LR_PAYLOADLENGTH );
     }
+    else if( this -> GetPacketType( true ) == PACKET_TYPE_BLE )
+    {
+        // In the case of BLE, the size returned in status[0] do not include the 2-byte length PDU header
+        // so it is added there
+        *rxPayloadLength = status[0] + 2;
+    }
     else
     {
         *rxPayloadLength = status[0];
@@ -635,6 +641,19 @@ uint8_t SX1280::SetCrcSeed( uint8_t *seed )
             break;
     }
     return updated;
+}
+
+void SX1280::SetBleAccessAddress( uint32_t accessAddress )
+{
+    this->WriteRegister( REG_LR_BLE_ACCESS_ADDRESS, ( accessAddress >> 24 ) & 0x000000FF );
+    this->WriteRegister( REG_LR_BLE_ACCESS_ADDRESS + 1, ( accessAddress >> 16 ) & 0x000000FF );
+    this->WriteRegister( REG_LR_BLE_ACCESS_ADDRESS + 2, ( accessAddress >> 8 ) & 0x000000FF );
+    this->WriteRegister( REG_LR_BLE_ACCESS_ADDRESS + 3, accessAddress & 0x000000FF );
+}
+
+void SX1280::SetBleAdvertizerAccessAddress( void )
+{
+    this->SetBleAccessAddress( BLE_ADVERTIZER_ACCESS_ADDRESS );
 }
 
 void SX1280::SetCrcPolynomial( uint16_t polynomial )
