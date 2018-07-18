@@ -60,6 +60,13 @@ public:
     virtual void Wakeup( void );
 
     /*!
+     * \brief Set the SPI Speed
+     *
+     * \param [in]  spiSpeed      Speed of the SPI in Hz
+     */
+    void SetSpiSpeed( uint32_t spiSpeed );
+
+    /*!
      * \brief Send a command that write data to the radio
      *
      * \param [in]  opcode        Opcode of the command

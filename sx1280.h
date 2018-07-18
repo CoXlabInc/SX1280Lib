@@ -190,6 +190,11 @@ typedef void ( SX1280Hal::*Trigger )( void );
 #define BLE_ADVERTIZER_ACCESS_ADDRESS               0x8E89BED6
 
 /*!
+ * \brief Select high sensitivity versus power consumption
+ */
+#define REG_HIGH_SENSITIVITY                        0x0891
+
+/*!
  * \brief Represents the states of the radio
  */
 typedef enum
@@ -546,11 +551,10 @@ typedef enum
  */
 typedef enum
 {
-    BLE_MASTER_SLAVE                        = 0x00,
-    BLE_ADVERTISER                          = 0x20,
+    BLE_PAYLOAD_LENGTH_MAX_31_BYTES         = 0x00,
+    BLE_PAYLOAD_LENGTH_MAX_37_BYTES         = 0x20,
     BLE_TX_TEST_MODE                        = 0x40,
-    BLE_RX_TEST_MODE                        = 0x60,
-    BLE_RXTX_TEST_MODE                      = 0x80,
+    BLE_PAYLOAD_LENGTH_MAX_255_BYTES        = 0x80,
 }RadioBleConnectionStates_t;
 
 /*!
@@ -635,47 +639,13 @@ typedef enum
 }RadioRangingRoles_t;
 
 /*!
- * \brief Represents all possible opcode understood by the radio
+ * \brief Represents the possible Mask settings for sensitivity selection
  */
-typedef enum RadioCommands_u
+typedef enum
 {
-    RADIO_GET_STATUS                        = 0xC0,
-    RADIO_WRITE_REGISTER                    = 0x18,
-    RADIO_READ_REGISTER                     = 0x19,
-    RADIO_WRITE_BUFFER                      = 0x1A,
-    RADIO_READ_BUFFER                       = 0x1B,
-    RADIO_SET_SLEEP                         = 0x84,
-    RADIO_SET_STANDBY                       = 0x80,
-    RADIO_SET_FS                            = 0xC1,
-    RADIO_SET_TX                            = 0x83,
-    RADIO_SET_RX                            = 0x82,
-    RADIO_SET_RXDUTYCYCLE                   = 0x94,
-    RADIO_SET_CAD                           = 0xC5,
-    RADIO_SET_TXCONTINUOUSWAVE              = 0xD1,
-    RADIO_SET_TXCONTINUOUSPREAMBLE          = 0xD2,
-    RADIO_SET_PACKETTYPE                    = 0x8A,
-    RADIO_GET_PACKETTYPE                    = 0x03,
-    RADIO_SET_RFFREQUENCY                   = 0x86,
-    RADIO_SET_TXPARAMS                      = 0x8E,
-    RADIO_SET_CADPARAMS                     = 0x88,
-    RADIO_SET_BUFFERBASEADDRESS             = 0x8F,
-    RADIO_SET_MODULATIONPARAMS              = 0x8B,
-    RADIO_SET_PACKETPARAMS                  = 0x8C,
-    RADIO_GET_RXBUFFERSTATUS                = 0x17,
-    RADIO_GET_PACKETSTATUS                  = 0x1D,
-    RADIO_GET_RSSIINST                      = 0x1F,
-    RADIO_SET_DIOIRQPARAMS                  = 0x8D,
-    RADIO_GET_IRQSTATUS                     = 0x15,
-    RADIO_CLR_IRQSTATUS                     = 0x97,
-    RADIO_CALIBRATE                         = 0x89,
-    RADIO_SET_REGULATORMODE                 = 0x96,
-    RADIO_SET_SAVECONTEXT                   = 0xD5,
-    RADIO_SET_AUTOTX                        = 0x98,
-    RADIO_SET_AUTOFS                        = 0x9E,
-    RADIO_SET_LONGPREAMBLE                  = 0x9B,
-    RADIO_SET_UARTSPEED                     = 0x9D,
-    RADIO_SET_RANGING_ROLE                  = 0xA3,
-}RadioCommands_t;
+    LNA_LOW_POWER_MASK                           = 0x00,
+    LNA_HIGH_SENSITIVITY_MASK                    = 0xC0,
+}RadioLnaSettings_t;
 
 /*!
  * \brief Represents an amount of time measurable by the radio clock
@@ -1369,7 +1339,11 @@ public:
     void GetRxBufferStatus( uint8_t *rxPayloadLength, uint8_t *rxStartBufferPointer );
 
     /*!
-     * \brief Gets the last received packet payload length
+     * \brief Gets the last received packet status
+     *
+     * The packet status structure returned depends on the modem type selected
+     *
+     * \see PacketStatus_t for the description of availabled informations
      *
      * \param [out] packetStatus  A structure of packet status
      */
@@ -1433,6 +1407,12 @@ public:
      * \param [in]  time          The delay in us after which a Tx is done
      */
     void SetAutoTx( uint16_t time );
+
+    /*!
+     * \brief Stop the chip to automatically send a packet after the end of a packet reception
+     *        if previously activated with SX1280::SetAutoTx command
+     */
+    void StopAutoTx( void );
 
     /*!
      * \brief Sets the chip to stay in FS mode after sending a packet

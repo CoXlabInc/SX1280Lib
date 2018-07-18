@@ -518,6 +518,12 @@ void SX1280::SetAutoTx( uint16_t time )
     WriteCommand( RADIO_SET_AUTOTX, buf, 2 );
 }
 
+void SX1280::StopAutoTx( void )
+{
+    uint8_t buf[2] = {0x00, 0x00};
+    WriteCommand( RADIO_SET_AUTOTX, buf, 2 );
+}
+
 void SX1280::SetAutoFs( bool enableAutoFs )
 {
     WriteCommand( RADIO_SET_AUTOFS, ( uint8_t * )&enableAutoFs, 1 );
@@ -981,6 +987,13 @@ void SX1280::ProcessIrqs( void )
                         if( rxTimeout != NULL )
                         {
                             rxTimeout( );
+                        }
+                    }
+                    if( ( irqRegs & IRQ_TX_DONE ) == IRQ_TX_DONE )
+                    {
+                        if( txDone != NULL )
+                        {
+                            txDone( );
                         }
                     }
                     break;

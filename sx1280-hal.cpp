@@ -135,14 +135,18 @@ void SX1280Hal::SpiInit( void )
     RadioNss = 1;
     RadioSpi->format( 8, 0 );
 #if defined( TARGET_KL25Z )
-    RadioSpi->frequency( 4000000 );
+    this->SetSpiSpeed( 4000000 );
 #elif defined( TARGET_NUCLEO_L476RG )
-    RadioSpi->frequency( 8000000 );
+    this->SetSpiSpeed( 8000000 );
 #else
-    RadioSpi->frequency( 8000000 );
+    this->SetSpiSpeed( 8000000 );
 #endif
-
     wait( 0.1 );
+}
+
+void SX1280Hal::SetSpiSpeed( uint32_t spiSpeed )
+{
+    RadioSpi->frequency( spiSpeed );
 }
 
 void SX1280Hal::UartInit( void )
