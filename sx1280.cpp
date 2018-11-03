@@ -13,9 +13,10 @@ License: Revised BSD License, see LICENSE.TXT file include in the project
 
 Maintainer: Miguel Luis, Gregory Cristian and Matthieu Verdy
 */
-#include "mbed.h"
 #include "sx1280.h"
-#include "sx1280-hal.h"
+#include <string.h>
+#include <stdio.h>
+#include <DigitalIO.hpp>
 
 /*!
  * \brief Radio registers definition
@@ -47,7 +48,7 @@ void SX1280::Init( void )
 
 void SX1280::SetRegistersDefault( void )
 {
-    for( int16_t i = 0; i < sizeof( RadioRegsInit ) / sizeof( RadioRegisters_t ); i++ )
+    for( size_t i = 0; i < sizeof( RadioRegsInit ) / sizeof( RadioRegisters_t ); i++ )
     {
         WriteRegister( RadioRegsInit[i].Addr, RadioRegsInit[i].Value );
     }
@@ -58,7 +59,7 @@ uint16_t SX1280::GetFirmwareVersion( void )
     return( ( ( ReadRegister( REG_LR_FIRMWARE_VERSION_MSB ) ) << 8 ) | ( ReadRegister( REG_LR_FIRMWARE_VERSION_MSB + 1 ) ) );
 }
 
-RadioStatus_t SX1280::GetStatus( void )
+SX1280::RadioStatus_t SX1280::GetStatus( void )
 {
     uint8_t stat = 0;
     RadioStatus_t status;
@@ -68,7 +69,7 @@ RadioStatus_t SX1280::GetStatus( void )
     return( status );
 }
 
-RadioOperatingModes_t SX1280::GetOpMode( void )
+SX1280::RadioOperatingModes_t SX1280::GetOpMode( void )
 {
     return( OperatingMode );
 }
@@ -178,7 +179,7 @@ void SX1280::SetPacketType( RadioPacketTypes_t packetType )
     WriteCommand( RADIO_SET_PACKETTYPE, ( uint8_t* )&packetType, 1 );
 }
 
-RadioPacketTypes_t SX1280::GetPacketType( bool returnLocalCopy )
+SX1280::RadioPacketTypes_t SX1280::GetPacketType( bool returnLocalCopy )
 {
     RadioPacketTypes_t packetType = PACKET_TYPE_NONE;
     if( returnLocalCopy == false )
@@ -270,9 +271,9 @@ void SX1280::SetModulationParams( ModulationParams_t *modParams )
             buf[2] = modParams->Params.Ble.ModulationShaping;
             break;
         case PACKET_TYPE_NONE:
-            buf[0] = NULL;
-            buf[1] = NULL;
-            buf[2] = NULL;
+            buf[0] = 0;
+            buf[1] = 0;
+            buf[2] = 0;
             break;
     }
     WriteCommand( RADIO_SET_MODULATIONPARAMS, buf, 3 );
@@ -306,8 +307,8 @@ void SX1280::SetPacketParams( PacketParams_t *packetParams )
             buf[2] = packetParams->Params.LoRa.PayloadLength;
             buf[3] = packetParams->Params.LoRa.Crc;
             buf[4] = packetParams->Params.LoRa.InvertIQ;
-            buf[5] = NULL;
-            buf[6] = NULL;
+            buf[5] = 0;
+            buf[6] = 0;
             break;
         case PACKET_TYPE_FLRC:
             buf[0] = packetParams->Params.Flrc.PreambleLength;
@@ -323,18 +324,18 @@ void SX1280::SetPacketParams( PacketParams_t *packetParams )
             buf[1] = packetParams->Params.Ble.CrcLength;
             buf[2] = packetParams->Params.Ble.BleTestPayload;
             buf[3] = packetParams->Params.Ble.Whitening;
-            buf[4] = NULL;
-            buf[5] = NULL;
-            buf[6] = NULL;
+            buf[4] = 0;
+            buf[5] = 0;
+            buf[6] = 0;
             break;
         case PACKET_TYPE_NONE:
-            buf[0] = NULL;
-            buf[1] = NULL;
-            buf[2] = NULL;
-            buf[3] = NULL;
-            buf[4] = NULL;
-            buf[5] = NULL;
-            buf[6] = NULL;
+            buf[0] = 0;
+            buf[1] = 0;
+            buf[2] = 0;
+            buf[3] = 0;
+            buf[4] = 0;
+            buf[5] = 0;
+            buf[6] = 0;
             break;
     }
     WriteCommand( RADIO_SET_PACKETPARAMS, buf, 7 );
@@ -708,7 +709,10 @@ void SX1280::SetRangingIdLength( RadioRangingIdCheckLengths_t length )
 
 void SX1280::SetDeviceRangingAddress( uint32_t address )
 {
-    uint8_t addrArray[] = { address >> 24, address >> 16, address >> 8, address };
+    uint8_t addrArray[] = { (uint8_t) (address >> 24),
+                            (uint8_t) (address >> 16),
+                            (uint8_t) (address >> 8),
+                            (uint8_t) (address >> 0) };
 
     switch( GetPacketType( true ) )
     {
@@ -722,7 +726,10 @@ void SX1280::SetDeviceRangingAddress( uint32_t address )
 
 void SX1280::SetRangingRequestAddress( uint32_t address )
 {
-    uint8_t addrArray[] = { address >> 24, address >> 16, address >> 8, address };
+    uint8_t addrArray[] = { (uint8_t) (address >> 24),
+                            (uint8_t) (address >> 16),
+                            (uint8_t) (address >> 8),
+                            (uint8_t) (address >> 0) };
 
     switch( GetPacketType( true ) )
     {
@@ -848,9 +855,9 @@ void SX1280::SetPollingMode( void )
 int32_t SX1280::complement2( const uint32_t num, const uint8_t bitCnt )
 {
     int32_t retVal = ( int32_t )num;
-    if( num >= 2<<( bitCnt - 2 ) )
+    if( num >= 2ul <<( bitCnt - 2 ) )
     {
-        retVal -= 2<<( bitCnt - 1 );
+        retVal -= 2 <<( bitCnt - 1 );
     }
     return retVal;
 }
@@ -901,6 +908,7 @@ void SX1280::OnDioIrq( void )
     }
 }
 
+#if 0
 void SX1280::ProcessIrqs( void )
 {
     RadioPacketTypes_t packetType = PACKET_TYPE_NONE;
@@ -909,9 +917,7 @@ void SX1280::ProcessIrqs( void )
     {
         if( this->IrqState == true )
         {
-            __disable_irq( );
             this->IrqState = false;
-            __enable_irq( );
         }
         else
         {
@@ -1190,3 +1196,4 @@ void SX1280::ProcessIrqs( void )
             break;
     }
 }
+#endif //0

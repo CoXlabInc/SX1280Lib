@@ -16,7 +16,8 @@ Maintainer: Miguel Luis, Gregory Cristian and Matthieu Verdy
 #ifndef __SX1280_H__
 #define __SX1280_H__
 
-#include "radio.h"
+#include <typedef.h>
+#include <math.h>
 
 /*!
  * \brief Enables/disables driver debug features
@@ -36,163 +37,175 @@ class SX1280Hal;
 typedef void ( SX1280Hal::*Trigger )( void );
 
 /*!
+ * \brief Represents the SX1280 and its features
+ *
+ * It implements the commands the SX1280 can understands
+ */
+class SX1280
+{
+public:
+
+#include "radio.h"
+
+/*!
  * \brief Provides the frequency of the chip running on the radio and the frequency step
  *
  * \remark These defines are used for computing the frequency divider to set the RF frequency
  */
-#define XTAL_FREQ                                   52000000
-#define FREQ_STEP                                   ( ( double )( XTAL_FREQ / pow( 2.0, 18.0 ) ) )
+enum { XTAL_FREQ = 52000000 };
+       const double FREQ_STEP = ( ( double )( XTAL_FREQ / pow( 2.0, 18.0 ) ) );
 
 /*!
  * \brief Compensation delay for SetAutoTx method in microseconds
  */
-#define AUTO_TX_OFFSET                              33
+enum { AUTO_TX_OFFSET = 33 };
 
-/*!
- * \brief The address of the register holding the firmware version MSB
- */
-#define REG_LR_FIRMWARE_VERSION_MSB                 0x0153
+enum { /*!
+        * \brief The address of the register holding the firmware version MSB
+        */
+      REG_LR_FIRMWARE_VERSION_MSB                 = 0x0153,
 
-/*!
- * \brief The address of the register holding the first byte defining the CRC seed
- *
- * \remark Only used for packet types GFSK and Flrc
- */
-#define REG_LR_CRCSEEDBASEADDR                      0x09C8
+      /*!
+       * \brief The address of the register holding the first byte defining the CRC seed
+       *
+       * \remark Only used for packet types GFSK and Flrc
+       */
+       REG_LR_CRCSEEDBASEADDR                      = 0x09C8,
 
-/*!
- * \brief The address of the register holding the first byte defining the CRC polynomial
- *
- * \remark Only used for packet types GFSK and Flrc
- */
-#define REG_LR_CRCPOLYBASEADDR                      0x09C6
+      /*!
+       * \brief The address of the register holding the first byte defining the CRC polynomial
+       *
+       * \remark Only used for packet types GFSK and Flrc
+       */
+      REG_LR_CRCPOLYBASEADDR                       = 0x09C6,
 
-/*!
- * \brief The address of the register holding the first byte defining the whitening seed
- *
- * \remark Only used for packet types GFSK, FLRC and BLE
- */
-#define REG_LR_WHITSEEDBASEADDR                     0x09C5
+      /*!
+       * \brief The address of the register holding the first byte defining the whitening seed
+       *
+       * \remark Only used for packet types GFSK, FLRC and BLE
+       */
+      REG_LR_WHITSEEDBASEADDR                      = 0x09C5,
 
-/*!
- * \brief The address of the register holding the ranging id check length
- *
- * \remark Only used for packet type Ranging
- */
-#define REG_LR_RANGINGIDCHECKLENGTH                 0x0931
+      /*!
+       * \brief The address of the register holding the ranging id check length
+       *
+       * \remark Only used for packet type Ranging
+       */
+      REG_LR_RANGINGIDCHECKLENGTH                  = 0x0931,
 
-/*!
- * \brief The address of the register holding the device ranging id
- *
- * \remark Only used for packet type Ranging
- */
-#define REG_LR_DEVICERANGINGADDR                    0x0916
+      /*!
+       * \brief The address of the register holding the device ranging id
+       *
+       * \remark Only used for packet type Ranging
+       */
+      REG_LR_DEVICERANGINGADDR                     = 0x0916,
 
-/*!
- * \brief The address of the register holding the device ranging id
- *
- * \remark Only used for packet type Ranging
- */
-#define REG_LR_REQUESTRANGINGADDR                   0x0912
+      /*!
+       * \brief The address of the register holding the device ranging id
+       *
+       * \remark Only used for packet type Ranging
+       */
+      REG_LR_REQUESTRANGINGADDR                    = 0x0912,
 
-/*!
- * \brief The address of the register holding ranging results configuration
- * and the corresponding mask
- *
- * \remark Only used for packet type Ranging
- */
-#define REG_LR_RANGINGRESULTCONFIG                  0x0924
-#define MASK_RANGINGMUXSEL                          0xCF
+      /*!
+       * \brief The address of the register holding ranging results configuration
+       * and the corresponding mask
+       *
+       * \remark Only used for packet type Ranging
+       */
+      REG_LR_RANGINGRESULTCONFIG                   = 0x0924,
+      MASK_RANGINGMUXSEL                           = 0xCF,
 
-/*!
- * \brief The address of the register holding the first byte of ranging results
- * Only used for packet type Ranging
- */
-#define REG_LR_RANGINGRESULTBASEADDR                0x0961
+      /*!
+       * \brief The address of the register holding the first byte of ranging results
+       * Only used for packet type Ranging
+       */
+      REG_LR_RANGINGRESULTBASEADDR                 = 0x0961,
 
-/*!
- * \brief The address of the register allowing to read ranging results
- *
- * \remark Only used for packet type Ranging
- */
-#define REG_LR_RANGINGRESULTSFREEZE                 0x097F
+      /*!
+       * \brief The address of the register allowing to read ranging results
+       *
+       * \remark Only used for packet type Ranging
+       */
+      REG_LR_RANGINGRESULTSFREEZE                  = 0x097F,
 
-/*!
- * \brief The address of the register holding the first byte of ranging calibration
- *
- * \remark Only used for packet type Ranging
- */
-#define REG_LR_RANGINGRERXTXDELAYCAL                0x092C
+      /*!
+       * \brief The address of the register holding the first byte of ranging calibration
+       *
+       * \remark Only used for packet type Ranging
+       */
+      REG_LR_RANGINGRERXTXDELAYCAL                 = 0x092C,
 
-/*!
- *\brief The address of the register holding the ranging filter window size
- *
- * \remark Only used for packet type Ranging
- */
-#define REG_LR_RANGINGFILTERWINDOWSIZE              0x091E
+      /*!
+       *\brief The address of the register holding the ranging filter window size
+       *
+       * \remark Only used for packet type Ranging
+       */
+      REG_LR_RANGINGFILTERWINDOWSIZE               = 0x091E,
 
-/*!
- *\brief The address of the register to reset for clearing ranging filter
- *
- * \remark Only used for packet type Ranging
- */
-#define REG_LR_RANGINGRESULTCLEARREG                0x0923
+      /*!
+       *\brief The address of the register to reset for clearing ranging filter
+       *
+       * \remark Only used for packet type Ranging
+       */
+      REG_LR_RANGINGRESULTCLEARREG                 = 0x0923,
 
-/*!
- * \brief The default number of samples considered in built-in ranging filter
- */
-#define DEFAULT_RANGING_FILTER_SIZE                 127
+      /*!
+       * \brief The default number of samples considered in built-in ranging filter
+       */
+      DEFAULT_RANGING_FILTER_SIZE                 = 127,
 
-/*!
- * \brief The address of the register holding LORA packet parameters
- */
-#define REG_LR_PACKETPARAMS                         0x903
+      /*!
+       * \brief The address of the register holding LORA packet parameters
+       */
+      REG_LR_PACKETPARAMS                          = 0x903,
 
-/*!
- * \brief The address of the register holding payload length
- *
- * \remark Do NOT try to read it directly. Use GetRxBuffer( ) instead.
- */
-#define REG_LR_PAYLOADLENGTH                        0x901
+      /*!
+       * \brief The address of the register holding payload length
+       *
+       * \remark Do NOT try to read it directly. Use GetRxBuffer( ) instead.
+       */
+      REG_LR_PAYLOADLENGTH                         = 0x901,
 
-/*!
- * \brief The addresses of the registers holding SyncWords values
- *
- * \remark The addresses depends on the Packet Type in use, and not all
- *         SyncWords are available for every Packet Type
- */
-#define REG_LR_SYNCWORDBASEADDRESS1                 0x09CE
-#define REG_LR_SYNCWORDBASEADDRESS2                 0x09D3
-#define REG_LR_SYNCWORDBASEADDRESS3                 0x09D8
+      /*!
+       * \brief The addresses of the registers holding SyncWords values
+       *
+       * \remark The addresses depends on the Packet Type in use, and not all
+       *         SyncWords are available for every Packet Type
+       */
+      REG_LR_SYNCWORDBASEADDRESS1                  = 0x09CE,
+      REG_LR_SYNCWORDBASEADDRESS2                  = 0x09D3,
+      REG_LR_SYNCWORDBASEADDRESS3                  = 0x09D8,
 
-/*!
- * \brief The MSB address and mask used to read the estimated frequency
- * error
- */
-#define REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB        0x0954
-#define REG_LR_ESTIMATED_FREQUENCY_ERROR_MASK       0x0FFFFF
+      /*!
+       * \brief The MSB address and mask used to read the estimated frequency
+       * error
+       */
+      REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB         = 0x0954,
+      REG_LR_ESTIMATED_FREQUENCY_ERROR_MASK        = 0x0FFFFF,
 
-/*!
- * \brief Defines how many bit errors are tolerated in sync word detection
- */
-#define REG_LR_SYNCWORDTOLERANCE                    0x09CD
+      /*!
+       * \brief Defines how many bit errors are tolerated in sync word detection
+       */
+      REG_LR_SYNCWORDTOLERANCE                     = 0x09CD,
 
-/*!
- * \brief Register and mask for GFSK and BLE preamble length forcing
- */
-#define REG_LR_PREAMBLELENGTH                       0x09C1
-#define MASK_FORCE_PREAMBLELENGTH                   0x8F
+      /*!
+       * \brief Register and mask for GFSK and BLE preamble length forcing
+       */
+      REG_LR_PREAMBLELENGTH                        = 0x09C1,
+      MASK_FORCE_PREAMBLELENGTH                    = 0x8F,
 
-/*!
- * \brief Register for MSB Access Address (BLE)
- */
-#define REG_LR_BLE_ACCESS_ADDRESS                   0x09CF
-#define BLE_ADVERTIZER_ACCESS_ADDRESS               0x8E89BED6
+      /*!
+       * \brief Register for MSB Access Address (BLE)
+       */
+      REG_LR_BLE_ACCESS_ADDRESS                    = 0x09CF,
+      BLE_ADVERTIZER_ACCESS_ADDRESS                = 0x8E89BED6,
 
-/*!
- * \brief Select high sensitivity versus power consumption
- */
-#define REG_HIGH_SENSITIVITY                        0x0891
+      /*!
+       * \brief Select high sensitivity versus power consumption
+       */
+      REG_HIGH_SENSITIVITY                         = 0x0891,
+};
 
 /*!
  * \brief Represents the states of the radio
@@ -919,23 +932,15 @@ typedef struct
     uint8_t DataRamRetention        : 1;                    //!< Data ram is conserved during sleep
 }SleepParams_t;
 
-/*!
- * \brief Represents the SX1280 and its features
- *
- * It implements the commands the SX1280 can understands
- */
-class SX1280 : public Radio
-{
-public:
     /*!
      * \brief Instantiates a SX1280 object and provides API functions to communicates with the radio
      *
      * \param [in]  callbacks      Pointer to the callbacks structure defining
      *                             all callbacks function pointers
      */
-    SX1280( RadioCallbacks_t *callbacks ):
+    SX1280():
         // The class members are value-initialiazed in member-initilaizer list
-        Radio( callbacks ), OperatingMode( MODE_STDBY_RC ), PacketType( PACKET_TYPE_NONE ),
+        OperatingMode( MODE_STDBY_RC ), PacketType( PACKET_TYPE_NONE ),
         LoRaBandwidth( LORA_BW_1600 ), IrqState( false ), PollingMode( false )
     {
         this->dioIrq        = &SX1280::OnDioIrq;
@@ -1600,7 +1605,7 @@ public:
      * \brief Process the analysis of radio IRQs and calls callback functions
      *        depending on radio state
      */
-    void ProcessIrqs( void );
+    virtual void ProcessIrqs( void ) = 0;
 
     /*!
      * \brief Force the preamble length in GFSK and BLE mode
