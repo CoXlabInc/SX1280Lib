@@ -891,6 +891,7 @@ void SX1280::SetInterruptMode( void )
     this->PollingMode = false;
 }
 
+#if 0
 void SX1280::OnDioIrq( void )
 {
     /*
@@ -908,7 +909,6 @@ void SX1280::OnDioIrq( void )
     }
 }
 
-#if 0
 void SX1280::ProcessIrqs( void )
 {
     RadioPacketTypes_t packetType = PACKET_TYPE_NONE;

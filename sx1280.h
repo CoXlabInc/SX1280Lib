@@ -943,8 +943,9 @@ typedef struct
         OperatingMode( MODE_STDBY_RC ), PacketType( PACKET_TYPE_NONE ),
         LoRaBandwidth( LORA_BW_1600 ), IrqState( false ), PollingMode( false )
     {
+#if 0
         this->dioIrq        = &SX1280::OnDioIrq;
-
+#endif
         // Warning: this constructor set the LoRaBandwidth member to a valid
         // value, but it is not related to the actual radio configuration!
     }
@@ -1013,12 +1014,14 @@ protected:
      */
     virtual void IoIrqInit( DioIrqHandler irqHandler ) = 0;
 
+#if 0
     /*!
      * \brief DIOs interrupt callback
      *
      * \remark Called to handle all 3 DIOs pins
      */
     void OnDioIrq( void );
+#endif
 
     /*!
      * \brief Set the role of the radio during ranging operations
@@ -1601,11 +1604,13 @@ public:
      */
     double GetFrequencyError( );
 
+#if 0
     /*!
      * \brief Process the analysis of radio IRQs and calls callback functions
      *        depending on radio state
      */
     virtual void ProcessIrqs( void ) = 0;
+#endif
 
     /*!
      * \brief Force the preamble length in GFSK and BLE mode
